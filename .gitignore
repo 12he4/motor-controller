@@ -1,0 +1,37 @@
+# ========== 必忽略项 ==========
+# 1. Python编译缓存（运行自动生成，无提交价值）
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# 2. 虚拟环境（本地依赖，不同环境不一致）
+venv/
+env/
+ENV/
+.venv/
+.env/
+
+# 3. 项目运行生成的临时/日志文件（测试/运行产生，易变）
+*.log
+*.tmp
+*.bak
+test_data/       # 死区脉冲数/分辨率测试的临时数据
+debug_*.log      # 调试分辨率的日志文件
+data/temp/       # 传感器临时采集数据
+
+# 4. 上位机打包产物（pyinstaller等生成，体积大）
+build/
+dist/
+*.exe
+*.spec
+
+# 5. 敏感配置文件（含串口/传感器参数，避免泄露）
+*.ini            # 如PSD3108仪表串口配置
+*.config         # 系统控制参数配置
+secrets.py       # 若有硬编码的敏感信息
+
+# 6. 操作系统垃圾文件（无意义，跨平台不一致）
+.DS_Store        # MacOS
+Thumbs.db        # Windows
+desktop.ini      # Windows
