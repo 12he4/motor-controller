@@ -2,6 +2,7 @@ import serial
 import struct
 from PyQt5.QtCore import QThread, pyqtSignal
 
+
 class SerialWorker(QThread):
     # 定义 PyQt 信号，用于跨线程将数据安全地抛给 UI 主线程
     # 参数：(当前天顶角, 目标力, 实际力)
@@ -12,7 +13,9 @@ class SerialWorker(QThread):
     
     # 用于向 UI 抛出原始字节流，在收发窗口显示 (原始字节, 是否为下位机发送来的数据)
     sig_raw_data = pyqtSignal(bytes, bool)
-
+    # 【新增】：回中校准数据信号 (边界1, 边界2, 零位) 和 分辨率测试信号 (增益)
+    sig_homing_data = pyqtSignal(float, float, float)
+    sig_resolution_data = pyqtSignal(int)
     def __init__(self):
         super().__init__()
         self.serial_port = serial.Serial()
@@ -107,9 +110,30 @@ class SerialWorker(QThread):
                         self.sig_log_msg.emit(f"[解包错误] {str(e)}")
                 
                 elif cmd == 0x10:
-                    self.sig_log_msg.emit("[系统通知] 下位机已确认回中校准 (0x10)")
+                    # 检查是否有 12 字节的负载 (3个 float)
+                    if data_len == 12:
+                        try:
+                            data_payload = frame[6:18]
+                            b1, b2, zero = struct.unpack('<fff', data_payload)
+                            self.sig_homing_data.emit(b1, b2, zero)
+                            self.sig_log_msg.emit(f"[系统通知] 收到回中校准结果: 边界A={b1:.3f}, 边界B={b2:.3f}, 零位={zero:.3f}")
+                        except Exception as e:
+                            self.sig_log_msg.emit(f"[解包错误] 回中数据异常: {str(e)}")
+                    else:
+                        self.sig_log_msg.emit("[系统通知] 下位机已确认回中校准 (无附加数据)")
+                        
                 elif cmd == 0x11:
-                    self.sig_log_msg.emit("[系统通知] 下位机已确认分辨率测试 (0x11)")
+                    # 检查是否有 4 字节的负载 (1个 float)
+                    if data_len == 4:
+                        try:
+                            data_payload = frame[6:10]
+                            gain = struct.unpack('<f', data_payload)[0]
+                            self.sig_resolution_data.emit(gain)
+                            self.sig_log_msg.emit(f"[系统通知] 收到分辨率测试结果: 增益={gain:.0f}")
+                        except Exception as e:
+                            self.sig_log_msg.emit(f"[解包错误] 分辨率数据异常: {str(e)}")
+                    else:
+                        self.sig_log_msg.emit("[系统通知] 下位机已确认分辨率测试 (无附加数据)")
                 
                 del buffer[:frame_len]
             else:
