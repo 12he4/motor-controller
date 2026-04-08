@@ -2,7 +2,7 @@ import sys
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QGridLayout, QGroupBox, QLabel, 
                              QComboBox, QPushButton, QLineEdit, QSlider, QMenu, QDialog,
-                             QTextEdit, QCheckBox) 
+                             QTextEdit, QCheckBox, QSpinBox) 
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import Qt, QTimer
 import pyqtgraph as pg
@@ -190,42 +190,51 @@ class MainWindow(QMainWindow):
         pid_group.setLayout(pid_layout)
         left_panel.addWidget(pid_group)
         
-        # 4. 数据收发区
-        terminal_group = QGroupBox("数据收发区")
-        terminal_layout = QVBoxLayout()
+        # 7. 数据收发区
+        term_group = QGroupBox("数据收发区")
+        term_layout = QVBoxLayout()
         
+        # --- 接收区顶部工具栏 ---
+        recv_tools_layout = QHBoxLayout()
+        self.chk_hex_show = QCheckBox("HEX显示")
+        self.chk_hex_show.setChecked(True) # 默认勾选 HEX 显示，避免乱码
+        self.btn_clear_recv = QPushButton("清空接收")
+        
+        recv_tools_layout.addWidget(self.chk_hex_show)
+        recv_tools_layout.addStretch() # 弹簧，将清空按钮挤到最右侧
+        recv_tools_layout.addWidget(self.btn_clear_recv)
+        term_layout.addLayout(recv_tools_layout)
+        
+        # --- 接收文本框 ---
         self.txt_recv = QTextEdit()
         self.txt_recv.setReadOnly(True)
-        terminal_layout.addWidget(self.txt_recv)
+        term_layout.addWidget(self.txt_recv)
         
-        term_ctrl_layout = QHBoxLayout()
-        term_ctrl_layout.addWidget(QLabel("格式:"))
-        self.cb_term_mode = QComboBox()
-        self.cb_term_mode.addItems(["字符串", "HEX"])
-        term_ctrl_layout.addWidget(self.cb_term_mode)
-        
-        term_ctrl_layout.addWidget(QLabel("编码:"))
+        # --- 发送区工具栏 ---
+        send_tools_layout = QHBoxLayout()
+        self.chk_hex_send = QCheckBox("HEX发送")
+        self.chk_hex_send.setChecked(True) # 默认勾选 HEX 发送
+        send_tools_layout.addWidget(self.chk_hex_send)
+        send_tools_layout.addWidget(QLabel("编码:"))
         self.cb_term_encoding = QComboBox()
-        self.cb_term_encoding.addItems(["UTF-8", "GBK"])
-        term_ctrl_layout.addWidget(self.cb_term_encoding)
+        self.cb_term_encoding.addItems(["UTF-8", "GBK", "ASCII"])
+        send_tools_layout.addWidget(self.cb_term_encoding)
+        self.chk_newline = QCheckBox("追加回车换行")
+        send_tools_layout.addWidget(self.chk_newline)  
+        send_tools_layout.addStretch() # 添加弹簧，让设置项靠左对齐
+        term_layout.addLayout(send_tools_layout)
         
-        self.chk_newline = QCheckBox("发送添加新行")
-        self.chk_newline.setChecked(True) 
-        term_ctrl_layout.addWidget(self.chk_newline)
-        
-        self.btn_clear_recv = QPushButton("清空数据")
-        term_ctrl_layout.addWidget(self.btn_clear_recv)
-        terminal_layout.addLayout(term_ctrl_layout)
-        
-        send_layout = QHBoxLayout()
+        # --- 发送区输入栏 (第二行：输入框与按钮) ---
+        send_input_layout = QHBoxLayout()
         self.le_send = QLineEdit()
-        self.btn_send_data = QPushButton("发送")
-        send_layout.addWidget(self.le_send)
-        send_layout.addWidget(self.btn_send_data)
+        send_input_layout.addWidget(self.le_send)
         
-        terminal_layout.addLayout(send_layout)
-        terminal_group.setLayout(terminal_layout)
-        left_panel.addWidget(terminal_group)
+        self.btn_send_data = QPushButton("发送")
+        send_input_layout.addWidget(self.btn_send_data)
+        
+        term_layout.addLayout(send_input_layout)
+        term_group.setLayout(term_layout)
+        left_panel.addWidget(term_group)
         
         left_panel.addStretch()
         main_layout.addLayout(left_panel, 1)
@@ -282,14 +291,27 @@ class MainWindow(QMainWindow):
         self.btn_pause_plot = QPushButton("暂停/继续")
         self.btn_clear_plot = QPushButton("清空波形")
         self.btn_auto_range = QPushButton("自动缩放 (Auto)") 
-        self.btn_record_data = QPushButton("开始录制数据")
         
         btn_layout.addWidget(self.btn_pause_plot)
         btn_layout.addWidget(self.btn_clear_plot)
         btn_layout.addWidget(self.btn_auto_range) 
-        btn_layout.addWidget(self.btn_record_data)
+        
+        # ================= 修改：Δt 步长设置排版 =================
+        btn_layout.addWidget(QLabel("Δt(ms):"))
+        self.sb_dt = QSpinBox()
+        self.sb_dt.setRange(1, 5000)
+        self.sb_dt.setValue(40)
+        self.sb_dt.setSingleStep(10)
+        self.sb_dt.setFixedWidth(70) # 限制输入框宽度，使其变窄
+        btn_layout.addWidget(self.sb_dt)
+        # ====================================================       
+        
+        self.btn_record_data = QPushButton("开始录制数据")
+        btn_layout.addWidget(self.btn_record_data)   
+        btn_layout.addStretch() # 添加弹簧，将所有控件向左侧紧凑挤压
         plot_layout.addLayout(btn_layout)
         
+        # ================= 实例化图表并添加十字光标 =================
         pg.setConfigOption('background', 'w')
         pg.setConfigOption('foreground', 'k')
         self.plot_widget = pg.PlotWidget()
@@ -298,6 +320,20 @@ class MainWindow(QMainWindow):
         self.plot_widget.setLabel('left', 'Force', units='N')
         self.plot_widget.setLabel('bottom', 'Time', units='s')
         
+        # 新增：十字光标与文本提示
+        self.v_line = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen(color=(100, 100, 100), style=Qt.DashLine))
+        self.h_line = pg.InfiniteLine(angle=0, movable=False, pen=pg.mkPen(color=(100, 100, 100), style=Qt.DashLine))
+        self.text_tooltip = pg.TextItem(text="", color='k', fill=pg.mkBrush(255, 255, 255, 200))
+        
+        self.plot_widget.addItem(self.v_line, ignoreBounds=True)
+        self.plot_widget.addItem(self.h_line, ignoreBounds=True)
+        self.plot_widget.addItem(self.text_tooltip, ignoreBounds=True)
+        
+        # 初始状态隐藏光标
+        self.v_line.hide()
+        self.h_line.hide()
+        self.text_tooltip.hide()
+
         self.curve_target = self.plot_widget.plot(pen=pg.mkPen('g', width=2), name="Target Force (N)")
         self.curve_actual = self.plot_widget.plot(pen=pg.mkPen('r', width=2), name="Actual Force (N)")
         
