@@ -16,7 +16,7 @@ class CSVLogger:
         """
         if self.is_recording:
             return False, "已经在录制中"
-        
+         
         self.buffer.clear()
         self.start_time = time.time()
         self.is_recording = True
