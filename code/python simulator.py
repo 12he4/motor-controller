@@ -72,11 +72,15 @@ class STM32Simulator:
                 
                 # 命令分发处理
                 if cmd == 0x10:
-                    print("[收到指令] 回中校准 (0x10) -> 回复确认")
-                    self.ser.write(self._build_frame(0x10)) # 返回 ACK
+                    print("[收到指令] 回中校准 (0x10) -> 模拟耗时后回复校准结果")
+                    # 模拟发送单片机的结果: 边界1=-4.108, 边界2=5.647, 零位=0.769
+                    payload = struct.pack('<fff', -4.108, 5.647, 0.769)
+                    self.ser.write(self._build_frame(0x10, payload)) 
                 elif cmd == 0x11:
-                    print("[收到指令] 分辨率测试 (0x11) -> 回复确认")
-                    self.ser.write(self._build_frame(0x11)) # 返回 ACK
+                    print("[收到指令] 分辨率测试 (0x11) -> 模拟耗时后回复测试结果")
+                    # 模拟发送单片机的结果: 增益=1956
+                    payload = struct.pack('<f', 1956.0)
+                    self.ser.write(self._build_frame(0x11, payload))
                 elif cmd == 0x13 and data_len == 12:
                     kp, ki, kd = struct.unpack('<fff', frame[6:18])
                     print(f"[收到指令] PID 参数下发 (0x13): Kp={kp}, Ki={ki}, Kd={kd}")
