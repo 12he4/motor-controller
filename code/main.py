@@ -19,7 +19,6 @@ class MainApp(QObject):
         self.ui = MainWindow()
         self.worker = SerialWorker()
         self.logger = CSVLogger()
-       
         # 波形数据缓存配置
         self.max_data_points = 5000 
         self.time_data = []
@@ -240,11 +239,11 @@ class MainApp(QObject):
             
         if not self.is_paused:
             self.ui.lbl_angle.setText(f"{angle:05.2f}")
-            self.ui.lbl_target.setText(f"{target/9.8:.3f} / {target:.3f}")
-            self.ui.lbl_actual.setText(f"{actual/9.8:.3f} / {actual:.3f}")
+            self.ui.lbl_target.setText(f"{target/9.80665:.3f} / {target:.3f}")
+            self.ui.lbl_actual.setText(f"{actual/9.80665:.3f} / {actual:.3f}")
             
             error = actual - target
-            error_kg = error / 9.8
+            error_kg = error / 9.80665
             sign = "+" if error >= 0 else ""
             self.ui.lbl_error.setText(f"{sign}{error_kg:.3f} / {sign}{error:.3f}")
         

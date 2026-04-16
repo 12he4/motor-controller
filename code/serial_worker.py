@@ -2,20 +2,23 @@ import serial
 import struct
 from PyQt5.QtCore import QThread, pyqtSignal
 
-
 class SerialWorker(QThread):
     # 定义 PyQt 信号，用于跨线程将数据安全地抛给 UI 主线程
-    # 参数：(当前天顶角, 目标力, 实际力)
     sig_status_data = pyqtSignal(float, float, float)
     
     # 用于向 UI 的收发窗口打印文本日志或异常信息
     sig_log_msg = pyqtSignal(str)
     
-    # 用于向 UI 抛出原始字节流，在收发窗口显示 (原始字节, 是否为下位机发送来的数据)
+    # 用于向 UI 抛出原始字节流
     sig_raw_data = pyqtSignal(bytes, bool)
-    # 【新增】：回中校准数据信号 (边界1, 边界2, 零位) 和 分辨率测试信号 (增益)
+    
+    # 回中校准数据信号和分辨率测试信号
     sig_homing_data = pyqtSignal(float, float, float)
-    sig_resolution_data = pyqtSignal(int)
+    sig_resolution_data = pyqtSignal(float)  # 【核心修改】：将 int 改为 float
+    
+    # 【必须确保这一行被正确添加在这里】
+    sig_pid_ack = pyqtSignal(float, float, float)
+
     def __init__(self):
         super().__init__()
         self.serial_port = serial.Serial()
@@ -91,8 +94,7 @@ class SerialWorker(QThread):
                 # 【修改点2】：将 buffer[4] 和 buffer[5] 拼接为 2 字节长度 (小端模式)
                 data_len = buffer[4] | (buffer[5] << 8)
                 
-                # 【修改点3】：基础长度由 8 变为 9
-                frame_len = 9 + data_len 
+                frame_len = 8 + data_len 
                 
                 if len(buffer) < frame_len:
                     break
@@ -121,7 +123,24 @@ class SerialWorker(QThread):
                             self.sig_log_msg.emit(f"[解包错误] 回中数据异常: {str(e)}")
                     else:
                         self.sig_log_msg.emit("[系统通知] 下位机已确认回中校准 (无附加数据)")
-                        
+                elif cmd == 0x30:
+                    data_payload = frame[6 : 6 + data_len]
+                    try:
+                        # 单片机发来的通常是GBK或ASCII编码的文本流，利用 decode 直接提取
+                        log_text = data_payload.decode('gbk', errors='ignore').strip()
+                        if log_text:
+                            self.sig_log_msg.emit(f"[下位机进程] {log_text}")
+                    except Exception as e:
+                        self.sig_log_msg.emit(f"[日志解包错误] {str(e)}")    
+                elif cmd == 0x13:
+                    # 拦截下位机发回来的 PID 确认数据
+                    if data_len == 12:
+                        try:
+                            data_payload = frame[6:18]
+                            kp, ki, kd = struct.unpack('<fff', data_payload)
+                            self.sig_pid_ack.emit(kp, ki, kd)
+                        except Exception as e:
+                            self.sig_log_msg.emit(f"[解包错误] PID确认异常: {str(e)}")             
                 elif cmd == 0x11:
                     # 检查是否有 4 字节的负载 (1个 float)
                     if data_len == 4:
@@ -166,16 +185,21 @@ class SerialWorker(QThread):
         frame = bytearray([0xAA, 0x55, 0x01, cmd, len_low, len_high])
         frame.extend(payload_bytes)
         
-        # 计算和校验 (从目标地址到数据内容，所有字节累加和的低 8 位)
-        # 注意：此处切片 frame[2:] 依然正确，因为目标地址依然在索引 2 的位置
-        check_sum = sum(frame[2:]) & 0xFF
-        frame.append(check_sum)
+        sumcheck = 0
+        addcheck = 0
         
-        # 附加校验 (暂以 0x00 0x00 占位)
-        frame.extend([0x00, 0x00])
+        # 遍历当前已组装好的所有字节 (相当于 C 语言中的 for(i=0; i<_cnt; i++))
+        for byte in frame:
+            sumcheck = (sumcheck + byte) & 0xFF   # 限制在 8 位防止溢出 (模拟 uint8_t)
+            addcheck = (addcheck + sumcheck) & 0xFF
+            
+        # 追加生成的两个校验位 (相当于 BUFF[_cnt++]=sumcheck; BUFF[_cnt++]=addcheck;)
+        frame.append(sumcheck)
+        frame.append(addcheck)
+        # ===============================================================
         
         try:
             self.serial_port.write(frame)
-            self.sig_raw_data.emit(bytes(frame), False) # 此处将 bytearray 强制转换为 bytes
+            self.sig_raw_data.emit(bytes(frame), False) # 回显给 UI
         except Exception as e:
             self.sig_log_msg.emit(f"[封包发送异常] {str(e)}")

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import sys
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QGridLayout, QGroupBox, QLabel, 
@@ -512,24 +513,27 @@ class MainWindow(QMainWindow):
         btn_layout.addWidget(self.btn_clear_plot)
         btn_layout.addWidget(self.btn_auto_range) 
         
-        btn_layout.addWidget(QLabel("Δt(ms):"))
+        lbl_dt = QLabel("Δt(ms):")
+        lbl_dt.setAlignment(Qt.AlignCenter)
+        lbl_dt.setStyleSheet(lbl_blue_style)  # 统一蓝色背景    
+        btn_layout.addWidget(lbl_dt)
         self.sb_dt = QSpinBox()
         self.sb_dt.setRange(1, 5000)
         self.sb_dt.setValue(40)
         self.sb_dt.setSingleStep(10)
-        self.sb_dt.setFixedWidth(85)            
+        self.sb_dt.setFixedWidth(140)            
         self.sb_dt.setAlignment(Qt.AlignCenter) 
         
         self.sb_dt.setStyleSheet("""
             QSpinBox, QLineEdit {
                 background-color: #ECF5FF; 
-                color: #409EFF;            
+                color: #000000;            
                 font-size: 30px;           
                 font-weight: bold;         
             }
             QSpinBox {
                 border: 1px solid #b3d8ff;
-                border-radius: 6px;
+                border-radius: 15px;
             }
         """)
         btn_layout.addWidget(self.sb_dt)
