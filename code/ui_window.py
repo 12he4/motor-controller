@@ -7,38 +7,41 @@ from PyQt5.QtWidgets import (
     QTextEdit, QCheckBox, QSpinBox, QScrollArea, QSizePolicy, QSplitter
 )
 from PyQt5.QtGui import QFont
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QSettings
 
 import pyqtgraph as pg
 
 VOFA_STYLE = """
 /* 全局背景与字体 */
 QWidget {{
-    background-color: #F4F6F9;
+    background-color: #F5F7FB;
     font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
     font-size: {base_font}px;
-    color: #303133;
+    color: #2B2F36;
 }}
 
 QGroupBox {{
     background-color: #FFFFFF;
-    border: 1px solid #E4E7ED;
+    border: 1px solid #DDE3EE;
     border-radius: {radius}px;
     margin-top: {group_margin}px;
+    padding-top: {title_gap}px;
 }}
 QGroupBox::title {{
     subcontrol-origin: margin;
     subcontrol-position: top left;
-    padding: 0 10px;
-    left: 15px;
-    top: 5px;
-    color: gray;
-    font-weight: bold;
+    left: 18px;
+    top: 2px;
+    padding: 2px 12px;
+    color: #FFFFFF;
+    background-color: #1F4E79;
+    border-radius: {title_radius}px;
+    font-weight: 800;
     font-size: {title_font}px;
 }}
 
 QPushButton {{
-    background-color: #409EFF;
+    background-color: #3A86FF;
     color: white;
     border: none;
     border-radius: {radius}px;
@@ -46,32 +49,32 @@ QPushButton {{
     font-weight: bold;
     font-size: {btn_font}px;
 }}
-QPushButton:hover {{ background-color: #66B1FF; }}
-QPushButton:pressed {{ background-color: #3A8EE6; }}
+QPushButton:hover {{ background-color: #5AA0FF; }}
+QPushButton:pressed {{ background-color: #2F6FE0; }}
 
 QComboBox, QLineEdit, QSpinBox {{
-    border: 1px solid #DCDFE6;
+    border: 1px solid #D6DCE8;
     border-radius: {radius}px;
     padding: {input_pad_v}px {input_pad_h}px;
     background: #FFFFFF;
-    selection-background-color: #409EFF;
+    selection-background-color: #3A86FF;
     font-size: {input_font}px;
 }}
-QComboBox:hover, QLineEdit:hover, QSpinBox:hover {{ border: 1px solid #C0C4CC; }}
-QComboBox:focus, QLineEdit:focus, QSpinBox:focus {{ border: 1px solid #409EFF; }}
+QComboBox:hover, QLineEdit:hover, QSpinBox:hover {{ border: 1px solid #AFC0DE; }}
+QComboBox:focus, QLineEdit:focus, QSpinBox:focus {{ border: 1px solid #3A86FF; }}
 QComboBox::drop-down {{ border: none; width: {dropdown_width}px; }}
 QComboBox::down-arrow {{ image: none; }}
 
 QComboBox QAbstractItemView {{
-    border: 1px solid #E4E7ED;
+    border: 1px solid #DDE3EE;
     border-radius: 4px;
     background-color: #FFFFFF;
-    selection-background-color: #F5F7FA;
-    selection-color: #409EFF;
+    selection-background-color: #EEF5FF;
+    selection-color: #1F4E79;
 }}
 
 QTextEdit {{
-    border: 1px solid #DCDFE6;
+    border: 1px solid #D6DCE8;
     border-radius: {radius}px;
     background: #FFFFFF;
     padding: {text_pad}px;
@@ -194,11 +197,13 @@ class MainWindow(QMainWindow):
         main_layout.setContentsMargins(self._scaled(6), self._scaled(6), self._scaled(6), self._scaled(6))
         main_layout.setSpacing(self._scaled(6))
 
+        self.settings = QSettings("PassiveSupport", "ErrorCompensationHost")
         self.splitter = QSplitter(Qt.Horizontal)
         self.splitter.setChildrenCollapsible(False)
+        self.splitter.splitterMoved.connect(self._save_splitter_state)
 
         lbl_blue_style = (
-            "background-color: #ECF5FF; color: #409EFF; border-radius: 6px; "
+            "background-color: #ECF5FF; color: #1F4E79; border-radius: 6px; "
             f"padding: {self._scaled(4)}px; font-weight: bold;"
         )
 
@@ -233,6 +238,7 @@ class MainWindow(QMainWindow):
 
         # 1. 通信设置区
         comm_group = QGroupBox("通信设置区")
+        comm_group.setStyleSheet(self._group_style("#EAF3FF", "#2F6FE0"))
         comm_layout = QGridLayout()
         comm_layout.setContentsMargins(self._scaled(14), self._scaled(20), self._scaled(14), self._scaled(14))
         comm_layout.setVerticalSpacing(self._scaled(10))
@@ -290,13 +296,14 @@ class MainWindow(QMainWindow):
 
         # 2. 系统控制区
         ctrl_group = QGroupBox("系统控制区")
+        ctrl_group.setStyleSheet(self._group_style("#F1FFF6", "#2E8B57"))
         ctrl_layout = QVBoxLayout()
         self.btn_homing = QPushButton("回中校准")
         ctrl_layout.addWidget(self.btn_homing)
 
         homing_grid = QGridLayout()
         homing_grid.setVerticalSpacing(self._scaled(6))
-        read_only_style = f"background-color: #F5F7FA; color: #909399; font-size: {self._scaled(22)}px; font-weight: bold;"
+        read_only_style = f"background-color: #F5F7FA; color: #4E5D78; font-size: {self._scaled(22)}px; font-weight: bold;"
 
         lbl_b1 = QLabel("边界1(kg):")
         lbl_b1.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
@@ -346,6 +353,7 @@ class MainWindow(QMainWindow):
 
         # 3. 调参配置区
         pid_group = QGroupBox("调参配置区")
+        pid_group.setStyleSheet(self._group_style("#FFF7E8", "#E58A00"))
         pid_layout = QVBoxLayout()
         self.widget_kp = PIDSliderWidget("Kp", 0, 0, 10000, 10)
         self.widget_ki = PIDSliderWidget("Ki", 0, 0, 10000, 1, is_highlight=True)
@@ -360,6 +368,7 @@ class MainWindow(QMainWindow):
 
         # 4. 数据收发区
         term_group = QGroupBox("数据收发区")
+        term_group.setStyleSheet(self._group_style("#F4F0FF", "#7B4DFF"))
         term_layout = QVBoxLayout()
 
         recv_tools_layout = QHBoxLayout()
@@ -409,6 +418,7 @@ class MainWindow(QMainWindow):
         right_panel = QVBoxLayout()
 
         status_group = QGroupBox("实时状态区")
+        status_group.setStyleSheet(self._group_style("#F0FBF8", "#138A72"))
         status_layout = QHBoxLayout()
 
         title_font = QFont("Microsoft YaHei", self._scaled(20), QFont.Bold)
@@ -421,7 +431,7 @@ class MainWindow(QMainWindow):
         angle_layout.addWidget(lbl_angle_title)
         self.lbl_angle = QLabel("00.00")
         self.lbl_angle.setFont(lcd_font)
-        self.lbl_angle.setStyleSheet("color: blue;")
+        self.lbl_angle.setStyleSheet("color: #2F6FE0;")
         self.lbl_angle.setAlignment(Qt.AlignCenter)
         self.lbl_angle.setMinimumHeight(self._scaled(60))
         self.lbl_angle.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
@@ -435,7 +445,7 @@ class MainWindow(QMainWindow):
         target_layout_disp.addWidget(lbl_target_title)
         self.lbl_target = QLabel("0.000      0.000")
         self.lbl_target.setFont(lcd_font)
-        self.lbl_target.setStyleSheet("color: darkgreen;")
+        self.lbl_target.setStyleSheet("color: #2E8B57;")
         self.lbl_target.setAlignment(Qt.AlignCenter)
         self.lbl_target.setMinimumHeight(self._scaled(60))
         self.lbl_target.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
@@ -449,7 +459,7 @@ class MainWindow(QMainWindow):
         actual_layout.addWidget(lbl_actual_title)
         self.lbl_actual = QLabel("0.000     0.000")
         self.lbl_actual.setFont(lcd_font)
-        self.lbl_actual.setStyleSheet("color: darkred;")
+        self.lbl_actual.setStyleSheet("color: #C94A4A;")
         self.lbl_actual.setAlignment(Qt.AlignCenter)
         self.lbl_actual.setMinimumHeight(self._scaled(60))
         self.lbl_actual.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
@@ -463,7 +473,7 @@ class MainWindow(QMainWindow):
         error_layout.addWidget(lbl_error_title)
         self.lbl_error = QLabel("+0.000     +0.000")
         self.lbl_error.setFont(lcd_font)
-        self.lbl_error.setStyleSheet("color: darkmagenta;")
+        self.lbl_error.setStyleSheet("color: #8A3FFC;")
         self.lbl_error.setAlignment(Qt.AlignCenter)
         self.lbl_error.setMinimumHeight(self._scaled(60))
         self.lbl_error.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
@@ -474,6 +484,7 @@ class MainWindow(QMainWindow):
         right_panel.addWidget(status_group, 1)
 
         plot_group = QGroupBox("波形显控区")
+        plot_group.setStyleSheet(self._group_style("#FFFFFF", "#1F4E79"))
         plot_layout = QVBoxLayout()
 
         btn_layout = QHBoxLayout()
@@ -500,13 +511,13 @@ class MainWindow(QMainWindow):
         self.sb_dt.setAlignment(Qt.AlignCenter)
         self.sb_dt.setStyleSheet(f"""
             QSpinBox, QLineEdit {{
-                background-color: #ECF5FF;
+                background-color: #F0F6FF;
                 color: #000000;
                 font-size: {self._scaled(18)}px;
                 font-weight: bold;
             }}
             QSpinBox {{
-                border: 1px solid #b3d8ff;
+                border: 1px solid #b9cfee;
                 border-radius: {self._scaled(10)}px;
             }}
         """)
@@ -563,7 +574,7 @@ class MainWindow(QMainWindow):
 
         self.splitter.setStretchFactor(0, 1)
         self.splitter.setStretchFactor(1, 4)
-        self.splitter.setSizes([self._scaled(320), self._scaled(880)])
+        self._restore_splitter_state()
         main_layout.addWidget(self.splitter)
 
     def _calc_scale_factor(self):
@@ -592,12 +603,58 @@ class MainWindow(QMainWindow):
             text_pad=self._scaled(8),
             dropdown_width=self._scaled(22),
             radius=self._scaled(6),
-            group_margin=self._scaled(18),
+            title_radius=self._scaled(8),
+            group_margin=self._scaled(22),
+            title_gap=self._scaled(10),
         )
+
+    def _group_style(self, background, accent):
+        return f"""
+            QGroupBox {{
+                background-color: {background};
+                border: 2px solid {accent};
+                border-radius: {self._scaled(10)}px;
+                margin-top: {self._scaled(24)}px;
+                padding-top: {self._scaled(8)}px;
+            }}
+            QGroupBox::title {{
+                subcontrol-origin: margin;
+                subcontrol-position: top left;
+                left: {self._scaled(16)}px;
+                top: {self._scaled(2)}px;
+                padding: {self._scaled(2)}px {self._scaled(12)}px;
+                color: #FFFFFF;
+                background-color: {accent};
+                border-radius: {self._scaled(8)}px;
+                font-weight: 800;
+                font-size: {self._scaled(18)}px;
+            }}
+        """
+
+    def _splitter_key(self):
+        return "main_splitter_sizes"
+
+    def _save_splitter_state(self, *_):
+        self.settings.setValue(self._splitter_key(), self.splitter.sizes())
+
+    def _restore_splitter_state(self):
+        sizes = self.settings.value(self._splitter_key())
+        if sizes:
+            try:
+                sizes = [int(s) for s in sizes]
+                if len(sizes) == 2:
+                    self.splitter.setSizes(sizes)
+                    return
+            except Exception:
+                pass
+        self.splitter.setSizes([self._scaled(320), self._scaled(880)])
 
 
 if __name__ == "__main__":
+    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+
     app = QApplication(sys.argv)
     window = MainWindow()
-    window.show()
+    window.showMaximized()
     sys.exit(app.exec_())

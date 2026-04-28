@@ -39,10 +39,11 @@ class MainApp(QObject):
         
         self.bind_signals()
         self.setup_axis_formatters()
+        self.install_plot_wheel_mode()
         self.update_plot_display()
         
     def setup_axis_formatters(self):
-        """利用 Python 动态特性拦截 PyQtGraph 的底层坐标轴渲染，强制修改小数位数"""
+        """保持坐标轴数值显示精度"""
         def bottom_tickStrings(values, scale, spacing):
             return [f"{v:.{self.x_decimals}f}" for v in values]
             
@@ -51,6 +52,66 @@ class MainApp(QObject):
             
         self.ui.plot_widget.getAxis('bottom').tickStrings = bottom_tickStrings
         self.ui.plot_widget.getAxis('left').tickStrings = left_tickStrings
+        self.ui.plot_widget.getAxis('bottom').enableAutoSIPrefix(False)
+        self.ui.plot_widget.getAxis('left').enableAutoSIPrefix(False)
+
+    def install_plot_wheel_mode(self):
+        view_box = self.ui.plot_widget.plotItem.vb
+        self._orig_wheel_event = view_box.wheelEvent
+
+        def wheel_event(ev, vb=view_box, orig=self._orig_wheel_event):
+            delta = ev.delta() if hasattr(ev, 'delta') else ev.angleDelta().y()
+            if delta == 0:
+                return orig(ev)
+
+            scene_pos = ev.scenePos()
+            if not vb.sceneBoundingRect().contains(scene_pos):
+                return orig(ev)
+
+            pos = vb.mapSceneToView(scene_pos)
+            scene_rect = vb.sceneBoundingRect()
+            bottom_band = max(18, scene_rect.height() * 0.14)
+            left_band = max(18, scene_rect.width() * 0.14)
+            on_x_axis = scene_pos.y() >= scene_rect.bottom() - bottom_band
+            on_y_axis = scene_pos.x() <= scene_rect.left() + left_band
+            in_plot = scene_rect.contains(scene_pos) and not on_x_axis and not on_y_axis
+
+            if on_x_axis and not on_y_axis:
+                self._zoom_axis(vb, pos, delta, axis='x')
+                ev.accept()
+                return
+            if on_y_axis and not on_x_axis:
+                self._zoom_axis(vb, pos, delta, axis='y')
+                ev.accept()
+                return
+            if in_plot:
+                self._zoom_axis(vb, pos, delta, axis='xy')
+                ev.accept()
+                return
+
+            return orig(ev)
+
+        view_box.wheelEvent = wheel_event
+
+    def _zoom_axis(self, vb, mouse_point, delta, axis='xy'):
+        factor = 0.9 if delta > 0 else 1.1
+        x, y = mouse_point.x(), mouse_point.y()
+        x_range = vb.viewRange()[0]
+        y_range = vb.viewRange()[1]
+
+        if axis in ('x', 'xy'):
+            x_span = x_range[1] - x_range[0]
+            new_x0 = x - (x - x_range[0]) * factor
+            new_x1 = new_x0 + x_span * factor
+            if new_x1 - new_x0 > 1e-9:
+                vb.setXRange(new_x0, new_x1, padding=0)
+
+        if axis in ('y', 'xy'):
+            y_span = y_range[1] - y_range[0]
+            new_y0 = y - (y - y_range[0]) * factor
+            new_y1 = new_y0 + y_span * factor
+            if new_y1 - new_y0 > 1e-9:
+                vb.setYRange(new_y0, new_y1, padding=0)
 
     def bind_signals(self):
         # 1. 后台通信线程 -> UI 界面更新
@@ -211,6 +272,8 @@ class MainApp(QObject):
         x_label = "Time" if self.x_axis_source == 'time' else self.x_axis_source.capitalize()
         x_unit = "s" if self.x_axis_source == 'time' else ("°" if self.x_axis_source == 'angle' else "N")
         self.ui.plot_widget.setLabel('bottom', x_label, units=x_unit)
+        self.ui.plot_widget.getAxis('bottom').enableAutoSIPrefix(False)
+        self.ui.plot_widget.getAxis('left').enableAutoSIPrefix(False)
 
     # ================= 串口启停逻辑 =================
     def toggle_serial(self):
