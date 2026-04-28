@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import csv
 import time
 
@@ -39,7 +40,7 @@ class CSVLogger:
             
         self.is_recording = False
         data_count = len(self.buffer)
-        return True, f"录制已停止，共捕获 {data_count} 条数据"
+        return True, f"录制已停止，共获取 {data_count} 条数据"
 
     def save_to_file(self, filepath):
         """

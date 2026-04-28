@@ -636,7 +636,11 @@ class MainApp(QObject):
                         self.append_log("[系统] 用户取消保存")
 
 if __name__ == "__main__":
+    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+
     app = QApplication(sys.argv)
     main_app = MainApp()
-    main_app.ui.show()
+    main_app.ui.showMaximized()
+    sys.exit(app.exec_())
     sys.exit(app.exec_())
