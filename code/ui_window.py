@@ -12,17 +12,18 @@ from PyQt5.QtCore import Qt, QSettings
 import pyqtgraph as pg
 
 VOFA_STYLE = """
-/* 全局背景与字体 */
+/* ── 研究仪器风格全局样式 ── */
 QWidget {{
-    background-color: #F5F7FB;
+    background-color: #E4E6EA;
     font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
     font-size: {base_font}px;
-    color: #2B2F36;
+    color: #1E2229;
 }}
 
 QGroupBox {{
     background-color: #FFFFFF;
-    border: 1px solid #DDE3EE;
+    border: 1px solid #CED4DE;
+    border-left: 3px solid #1A3650;
     border-radius: {radius}px;
     margin-top: {group_margin}px;
     padding-top: {title_gap}px;
@@ -32,54 +33,88 @@ QGroupBox::title {{
     subcontrol-position: top left;
     left: 18px;
     top: 2px;
-    padding: 2px 12px;
+    padding: 2px 14px;
     color: #FFFFFF;
-    background-color: #1F4E79;
+    background-color: #1A3650;
     border-radius: {title_radius}px;
-    font-weight: 800;
+    font-weight: 700;
     font-size: {title_font}px;
+    letter-spacing: 1px;
 }}
 
 QPushButton {{
-    background-color: #3A86FF;
-    color: white;
+    background-color: #1A3650;
+    color: #FFFFFF;
     border: none;
     border-radius: {radius}px;
     padding: {btn_pad_v}px {btn_pad_h}px;
     font-weight: bold;
     font-size: {btn_font}px;
 }}
-QPushButton:hover {{ background-color: #5AA0FF; }}
-QPushButton:pressed {{ background-color: #2F6FE0; }}
+QPushButton:hover {{ background-color: #264A6E; }}
+QPushButton:pressed {{ background-color: #10273D; }}
 
 QComboBox, QLineEdit, QSpinBox {{
-    border: 1px solid #D6DCE8;
+    border: 1px solid #C4CAD4;
     border-radius: {radius}px;
     padding: {input_pad_v}px {input_pad_h}px;
     background: #FFFFFF;
-    selection-background-color: #3A86FF;
+    selection-background-color: #1A3650;
+    selection-color: #FFFFFF;
     font-size: {input_font}px;
 }}
-QComboBox:hover, QLineEdit:hover, QSpinBox:hover {{ border: 1px solid #AFC0DE; }}
-QComboBox:focus, QLineEdit:focus, QSpinBox:focus {{ border: 1px solid #3A86FF; }}
+QComboBox:hover, QLineEdit:hover, QSpinBox:hover {{ border: 1px solid #8A94A3; }}
+QComboBox:focus, QLineEdit:focus, QSpinBox:focus {{ border: 1px solid #1A3650; }}
 QComboBox::drop-down {{ border: none; width: {dropdown_width}px; }}
 QComboBox::down-arrow {{ image: none; }}
 
 QComboBox QAbstractItemView {{
-    border: 1px solid #DDE3EE;
-    border-radius: 4px;
+    border: 1px solid #CED4DE;
+    border-radius: 2px;
     background-color: #FFFFFF;
-    selection-background-color: #EEF5FF;
-    selection-color: #1F4E79;
+    selection-background-color: #DCE3EC;
+    selection-color: #1A3650;
 }}
 
 QTextEdit {{
-    border: 1px solid #D6DCE8;
+    border: 1px solid #C4CAD4;
     border-radius: {radius}px;
     background: #FFFFFF;
     padding: {text_pad}px;
     font-size: {text_font}px;
+    color: #1E2229;
 }}
+
+QSlider::groove:horizontal {{
+    border: 1px solid #C4CAD4;
+    height: 6px;
+    background: #EBEDF0;
+    border-radius: 3px;
+}}
+QSlider::handle:horizontal {{
+    background: #1A3650;
+    border: none;
+    width: 14px;
+    height: 14px;
+    margin: -5px 0;
+    border-radius: 7px;
+}}
+QSlider::handle:horizontal:hover {{
+    background: #264A6E;
+}}
+
+QScrollBar:vertical {{
+    background: #EAECEF;
+    width: 8px;
+    border-radius: 4px;
+}}
+QScrollBar::handle:vertical {{
+    background: #B4BAC6;
+    min-height: 30px;
+    border-radius: 4px;
+}}
+QScrollBar::handle:vertical:hover {{ background: #8A94A3; }}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0; }}
 """
 
 
@@ -96,7 +131,7 @@ class PIDSliderWidget(QWidget):
 
         self.lbl = QLabel(f"{name}:")
         if is_highlight:
-            self.lbl.setStyleSheet("color: red; font-weight: bold;")
+            self.lbl.setStyleSheet("color: #C0392B; font-weight: bold;")
         layout.addWidget(self.lbl)
 
         self.slider = QSlider(Qt.Horizontal)
@@ -109,7 +144,7 @@ class PIDSliderWidget(QWidget):
         self.le.setAlignment(Qt.AlignCenter)
         le_style = "font-size: 18px; font-weight: bold;"
         if is_highlight:
-            le_style += " border: 2px solid red; background-color: #ffe6e6;"
+            le_style += " border-bottom: 2px solid #C0392B;"
         self.le.setStyleSheet(le_style)
         layout.addWidget(self.le)
 
@@ -203,8 +238,8 @@ class MainWindow(QMainWindow):
         self.splitter.splitterMoved.connect(self._save_splitter_state)
 
         lbl_blue_style = (
-            "background-color: #ECF5FF; color: #1F4E79; border-radius: 6px; "
-            f"padding: {self._scaled(4)}px; font-weight: bold;"
+            "color: #1A3650; font-weight: bold; "
+            f"padding: {self._scaled(2)}px;"
         )
 
         def setup_combo(cb, items, default_idx=0):
@@ -216,10 +251,10 @@ class MainWindow(QMainWindow):
             cb.lineEdit().setAlignment(Qt.AlignCenter)
             cb.setStyleSheet(f"""
                 QComboBox, QLineEdit {{
-                    background: transparent;
+                    background: #FAFBFC;
                     font-size: {self._scaled(15)}px;
                     font-weight: bold;
-                    color: black;
+                    color: #1E2229;
                 }}
             """)
             return cb
@@ -238,7 +273,7 @@ class MainWindow(QMainWindow):
 
         # 1. 通信设置区
         comm_group = QGroupBox("通信设置区")
-        comm_group.setStyleSheet(self._group_style("#EAF3FF", "#2F6FE0"))
+        comm_group.setStyleSheet(self._group_style())
         comm_layout = QGridLayout()
         comm_layout.setContentsMargins(self._scaled(14), self._scaled(20), self._scaled(14), self._scaled(14))
         comm_layout.setVerticalSpacing(self._scaled(10))
@@ -296,14 +331,14 @@ class MainWindow(QMainWindow):
 
         # 2. 系统控制区
         ctrl_group = QGroupBox("系统控制区")
-        ctrl_group.setStyleSheet(self._group_style("#F1FFF6", "#2E8B57"))
+        ctrl_group.setStyleSheet(self._group_style())
         ctrl_layout = QVBoxLayout()
         self.btn_homing = QPushButton("回中校准")
         ctrl_layout.addWidget(self.btn_homing)
 
         homing_grid = QGridLayout()
         homing_grid.setVerticalSpacing(self._scaled(6))
-        read_only_style = f"background-color: #F5F7FA; color: #4E5D78; font-size: {self._scaled(22)}px; font-weight: bold;"
+        read_only_style = f"background-color: #F4F5F7; color: #1A3650; font-size: {self._scaled(22)}px; font-weight: bold; border-bottom: 2px solid #CED4DE;"
 
         lbl_b1 = QLabel("边界1(kg):")
         lbl_b1.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
@@ -353,7 +388,7 @@ class MainWindow(QMainWindow):
 
         # 3. 调参配置区
         pid_group = QGroupBox("调参配置区")
-        pid_group.setStyleSheet(self._group_style("#FFF7E8", "#E58A00"))
+        pid_group.setStyleSheet(self._group_style())
         pid_layout = QVBoxLayout()
         self.widget_kp = PIDSliderWidget("Kp", 0, 0, 10000, 10)
         self.widget_ki = PIDSliderWidget("Ki", 0, 0, 10000, 1, is_highlight=True)
@@ -368,7 +403,7 @@ class MainWindow(QMainWindow):
 
         # 4. 数据收发区
         term_group = QGroupBox("数据收发区")
-        term_group.setStyleSheet(self._group_style("#F4F0FF", "#7B4DFF"))
+        term_group.setStyleSheet(self._group_style())
         term_layout = QVBoxLayout()
 
         recv_tools_layout = QHBoxLayout()
@@ -418,7 +453,7 @@ class MainWindow(QMainWindow):
         right_panel = QVBoxLayout()
 
         status_group = QGroupBox("实时状态区")
-        status_group.setStyleSheet(self._group_style("#F0FBF8", "#138A72"))
+        status_group.setStyleSheet(self._group_style())
         status_layout = QHBoxLayout()
 
         title_font = QFont("Microsoft YaHei", self._scaled(20), QFont.Bold)
@@ -431,7 +466,10 @@ class MainWindow(QMainWindow):
         angle_layout.addWidget(lbl_angle_title)
         self.lbl_angle = QLabel("00.00")
         self.lbl_angle.setFont(lcd_font)
-        self.lbl_angle.setStyleSheet("color: #2F6FE0;")
+        self.lbl_angle.setStyleSheet(
+            "color: #1A3650; background-color: #F4F5F7; border-bottom: 3px solid #CED4DE; "
+            f"padding: {self._scaled(4)}px {self._scaled(8)}px;"
+        )
         self.lbl_angle.setAlignment(Qt.AlignCenter)
         self.lbl_angle.setMinimumHeight(self._scaled(60))
         self.lbl_angle.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
@@ -445,7 +483,10 @@ class MainWindow(QMainWindow):
         target_layout_disp.addWidget(lbl_target_title)
         self.lbl_target = QLabel("0.000      0.000")
         self.lbl_target.setFont(lcd_font)
-        self.lbl_target.setStyleSheet("color: #2E8B57;")
+        self.lbl_target.setStyleSheet(
+            "color: #1A3650; background-color: #F4F5F7; border-bottom: 3px solid #CED4DE; "
+            f"padding: {self._scaled(4)}px {self._scaled(8)}px;"
+        )
         self.lbl_target.setAlignment(Qt.AlignCenter)
         self.lbl_target.setMinimumHeight(self._scaled(60))
         self.lbl_target.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
@@ -459,7 +500,10 @@ class MainWindow(QMainWindow):
         actual_layout.addWidget(lbl_actual_title)
         self.lbl_actual = QLabel("0.000     0.000")
         self.lbl_actual.setFont(lcd_font)
-        self.lbl_actual.setStyleSheet("color: #C94A4A;")
+        self.lbl_actual.setStyleSheet(
+            "color: #1A3650; background-color: #F4F5F7; border-bottom: 3px solid #CED4DE; "
+            f"padding: {self._scaled(4)}px {self._scaled(8)}px;"
+        )
         self.lbl_actual.setAlignment(Qt.AlignCenter)
         self.lbl_actual.setMinimumHeight(self._scaled(60))
         self.lbl_actual.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
@@ -473,7 +517,10 @@ class MainWindow(QMainWindow):
         error_layout.addWidget(lbl_error_title)
         self.lbl_error = QLabel("+0.000     +0.000")
         self.lbl_error.setFont(lcd_font)
-        self.lbl_error.setStyleSheet("color: #8A3FFC;")
+        self.lbl_error.setStyleSheet(
+            "color: #1A3650; background-color: #F4F5F7; border-bottom: 3px solid #CED4DE; "
+            f"padding: {self._scaled(4)}px {self._scaled(8)}px;"
+        )
         self.lbl_error.setAlignment(Qt.AlignCenter)
         self.lbl_error.setMinimumHeight(self._scaled(60))
         self.lbl_error.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
@@ -484,7 +531,7 @@ class MainWindow(QMainWindow):
         right_panel.addWidget(status_group, 1)
 
         plot_group = QGroupBox("波形显控区")
-        plot_group.setStyleSheet(self._group_style("#FFFFFF", "#1F4E79"))
+        plot_group.setStyleSheet(self._group_style())
         plot_layout = QVBoxLayout()
 
         btn_layout = QHBoxLayout()
@@ -511,14 +558,14 @@ class MainWindow(QMainWindow):
         self.sb_dt.setAlignment(Qt.AlignCenter)
         self.sb_dt.setStyleSheet(f"""
             QSpinBox, QLineEdit {{
-                background-color: #F0F6FF;
-                color: #000000;
+                background-color: #F4F5F7;
+                color: #1E2229;
                 font-size: {self._scaled(18)}px;
                 font-weight: bold;
             }}
             QSpinBox {{
-                border: 1px solid #b9cfee;
-                border-radius: {self._scaled(10)}px;
+                border: 1px solid #C4CAD4;
+                border-radius: {self._scaled(4)}px;
             }}
         """)
         btn_layout.addWidget(self.sb_dt)
@@ -608,12 +655,13 @@ class MainWindow(QMainWindow):
             title_gap=self._scaled(10),
         )
 
-    def _group_style(self, background, accent):
+    def _group_style(self):
         return f"""
             QGroupBox {{
-                background-color: {background};
-                border: 2px solid {accent};
-                border-radius: {self._scaled(10)}px;
+                background-color: #FFFFFF;
+                border: 1px solid #CED4DE;
+                border-left: 3px solid #1A3650;
+                border-radius: {self._scaled(4)}px;
                 margin-top: {self._scaled(24)}px;
                 padding-top: {self._scaled(8)}px;
             }}
@@ -622,12 +670,13 @@ class MainWindow(QMainWindow):
                 subcontrol-position: top left;
                 left: {self._scaled(16)}px;
                 top: {self._scaled(2)}px;
-                padding: {self._scaled(2)}px {self._scaled(12)}px;
+                padding: {self._scaled(2)}px {self._scaled(14)}px;
                 color: #FFFFFF;
-                background-color: {accent};
-                border-radius: {self._scaled(8)}px;
-                font-weight: 800;
-                font-size: {self._scaled(18)}px;
+                background-color: #1A3650;
+                border-radius: {self._scaled(4)}px;
+                font-weight: 700;
+                font-size: {self._scaled(15)}px;
+                letter-spacing: 1px;
             }}
         """
 
